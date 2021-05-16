@@ -1,14 +1,21 @@
 # Tipos de tokens
 
-ENTERO, MAS, MENOS, MUL, DIV, FIN = 'ENTERO', 'MAS', 'MUL', 'DIV', 'MENOS', 'FIN'
+from os import error
+
+
+ENTERO = 'ENTERO'
+MAS    = 'MAS'
+MENOS  = 'MENOS'
+MUL    = 'MUL'
+DIV    = 'DIV'
+FINCADENA = 'FINCADENA'
+FIN    = 'FIN'
 
 class Token(object):
     
     def __init__(self, tipo, valor):
-        # Tipo del token, ENTERO, MAS, FIN
         self.tipo = tipo
 
-        # Valor del token: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, +, o None
         self.valor = valor
 
     def __str__(self):
@@ -32,6 +39,7 @@ class Token(object):
 
 
 class Interprete(object):
+
     def __init__(self, texto):
         # Cadena de entrada, por ejemplo 3+5
         self.texto = texto
@@ -41,8 +49,10 @@ class Interprete(object):
         self.token_actual = None
         self.caracter_actual = self.texto[self.pos]
 
-    def error(self):
-        raise Exception('Error analizando la entrada')
+    def error(self, tipo_error):
+        Error = 'Error: {}'.format(tipo_error)
+        print(Error)
+        exit()
 
     def avanzar(self):
         """Avanza en la "pos" y establece la variable "caracter_actual" """
@@ -75,65 +85,86 @@ class Interprete(object):
             
             if self.caracter_actual.isspace():
                 if self.pos == 0:
-                    return self.error()
+                    # Esto esta para que todo este 
+                    # alineado a la izquierda
+                    return self.error("todo debe estar alineado a la izquierda")
                 else:
                     self.ignorar_espacios()
                     continue
             
             if self.caracter_actual.isdigit():
                 return Token(ENTERO, self.entero())
+
             elif self.caracter_actual == '+':
                 self.avanzar()
                 return Token(MAS, '+')
+                
             elif self.caracter_actual == '-':
                 self.avanzar()
                 return Token(MENOS, '-')
+            
             elif self.caracter_actual == '*':
                 self.avanzar()
                 return Token(MUL, '*')
+            
             elif self.caracter_actual == '/':
                 self.avanzar()
                 return Token(DIV, '/')
+
             elif self.caracter_actual == ';':
-                return Token(FIN, None)
+                return Token(FINCADENA, ';')
             else:
-                self.error()
+                self.error("caracter ilegal")
+        return Token(FIN, None)
     
-    def consumir(self, tipo_token):
-        # Compara el tipo del token actual con el tipo del token anterior
-        # y si son iguales se "come" al token actual y asigna el siguiente
-        # token a self.token_actual, de otra manera, crea una excepcion
-        if self.token_actual is not None:
-            if self.token_actual.tipo == tipo_token:
-                self.token_actual = self.conseguir_siguiente_token()
-            else:
-                self.error()
+    def consumir_token(self, tipo_token):
+        # Esta funcion va consumiendo los Tokens de la cadena
+        # Se llama cuando se quiere consumir el token en el que
+        # se encuentra, si el tipo que se indica consumir y el tipo del token
+        # actual coinciden entonces lo consume
+
+        if self.token_actual.tipo == tipo_token:
+            self.token_actual = self.conseguir_siguiente_token()
         else:
-            self.error()
+            self.error("cadena invalida")
 
     def termino(self):
-        self.consumir(ENTERO)
-        
-            
+        # Se consume un token ENTERO y se consigue el siguiente token
+        self.consumir_token(ENTERO)
+
+
+ 
     def expresion(self):
         """expresion -> ENTERO MAS ENTERO"""
         # Define el token actual como el primer token que se saco de la
         # cadena de entrada
         self.token_actual = self.conseguir_siguiente_token()
+
+        # Se consume un token ENTERO
         self.termino()
-        # Se espera que el token actual sea un solo digito entero
-        try:
-            while self.token_actual.tipo in (MAS, MENOS):
-                token = self.token_actual
-                if token.tipo == MAS:
-                    self.consumir(MAS)
-                    self.termino()
-                elif token.tipo == MENOS:
-                    self.consumir(MENOS)
-                    self.termino()     ##########Checar por aqui algo anda raro
-            return 'Cadena Valida'
-        except AttributeError:
-            self.error()
+        while self.token_actual.tipo in (MAS, MENOS, MUL, DIV):
+            token = self.token_actual
+            if token.tipo == MAS:
+                # Se consume un token MAS y se consume un token ENTERO
+                self.consumir_token(MAS)
+                self.termino()
+            elif token.tipo == MENOS:
+                # Se consume un token MENOS y se consume un token ENTERO
+                self.consumir_token(MENOS)
+                self.termino()
+            elif token.tipo == MUL:
+                self.consumir_token(MUL)
+                self.termino()
+            elif token.tipo == DIV:
+                self.consumir_token(DIV)
+                self.termino()
+        if self.token_actual.tipo == FINCADENA and self.pos == len(self.texto) - 1:
+            self.consumir_token(FINCADENA)
+            return 'Cadena aceptada'
+        else:
+            self.error("Cadena invalida")
+
+
 
 def main():
     while True:
